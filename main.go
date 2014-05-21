@@ -5,20 +5,12 @@ import (
     "net/http"
     "log"
     "fmt"
-    //"io/ioutil"
     "encoding/base64"
-    "github.com/go-av/curl"
     "time"
+    "io/ioutil"
 );
 
 func main() {
-
-    //var img64 []byte
-    //img64, _ = ioutil.ReadFile("/home/ubuntu/mygo/src/pushImage/google.png")
-    //str := base64.StdEncoding.EncodeToString(img64)
-    //fmt.Println(str)
-
-
     http.HandleFunc("/connws/", ConnWs)
     err := http.ListenAndServe(":9090", nil)
     if err != nil {
@@ -37,13 +29,15 @@ func ConnWs(w http.ResponseWriter, r *http.Request) {
             return
     }
 
+    var img64 [] byte
+
     res := map[string]interface{}{}
     for {
         if err = ws.ReadJSON(&res); err != nil {
             if err.Error() == "EOF" {
                 return
             }
-            // ErrShortWrite means that a write accepted fewer bytes than requested but failed to return an explicit error.
+            // ErrShortWrite means a write accepted fewer bytes than requested then failed to return an explicit error.
             if err.Error() == "unexpected EOF" {
                 return
             }
@@ -55,17 +49,19 @@ func ConnWs(w http.ResponseWriter, r *http.Request) {
         log.Println(res)
 
         for {
-            //_, b := curl.Bytes("http://2d3bd0383620907d11324ede6e9f2b57.r0202.relay.yun.netgear.cn:80/ws/api/requestProxy/172.16.0.6/live/snapshot?p=cvJfXTMwNQRl8EGzMYvHgQl7H2x7bAcD80ckjIYr0K1IjSqRVpB1cY4FwsEhL3So")
-            _, b := curl.Bytes("https://www.google.com.tw/images/srpr/logo11w.png")
-            str2 := base64.StdEncoding.EncodeToString(b)
-            res["img64"] = str2
+            files, _ := ioutil.ReadDir("./images");
+            for _, f := range files {
+                img64, _ = ioutil.ReadFile("./images/" + f.Name())
+                str := base64.StdEncoding.EncodeToString(img64)
+                res["img64"] = str
 
-            if err = ws.WriteJSON(&res); err != nil {
-                fmt.Println("watch dir - Write : " + err.Error())
-                //return
+                if err = ws.WriteJSON(&res); err != nil {
+                    fmt.Println("watch dir - Write : " + err.Error())
+                    //return
+                }
+                time.Sleep(50 * time.Millisecond);
             }
             time.Sleep(50 * time.Millisecond);
         }
     }
-
 }
